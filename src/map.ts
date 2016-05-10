@@ -1,5 +1,5 @@
 export interface IMapTile {
-    type: 'grass' | 'mountain' | 'water',
+    type: 'grass' | 'forest' | 'mountain' | 'water',
     castle?: string,
     treasure?: boolean
 }
@@ -9,12 +9,12 @@ export interface TileImplementation {
 }
 
 export class MapTile implements IMapTile {
-    private _type: 'grass' | 'mountain' | 'water';
+    private _type: 'grass' | 'forest' | 'mountain' | 'water';
     private _castle: string;
     private _treasure: boolean;
 
     constructor(data: {
-            type: 'grass' | 'mountain' | 'water',
+            type: 'grass' | 'forest' | 'mountain' | 'water',
             castle?: string,
             treasure?: boolean
         }) {
@@ -80,7 +80,7 @@ export class GameMap {
         for (let y = 0; y < viewSize; y++) {
             for (let x = 0; x < viewSize; x++) {
                 if (!this.hasSeen(this.x + x - offset, this.y - y + offset)) {
-                    this.tiles[x + ',' + y] = new this.mapTileClass(view[y][x]);
+                    this.tiles[(this.x + x - offset) + ',' + (this.y - y + offset)] = new this.mapTileClass(view[y][x]);
                 }
             }
         }
@@ -103,9 +103,9 @@ export class GameMap {
         });
 
         let lines: string[] = [];
-        for (let y = maxY - 1; y >= minY; y--) {
+        for (let y = maxY; y >= minY; y--) {
             let currentLine: string[] = [];
-            for (let x = minX; x < maxX; x++) {
+            for (let x = minX; x <= maxX; x++) {
                 let tile = this.getTileAt(x, y);
                 if (x === this.x && y === this.y) {
                     currentLine.push(`(${tile.type.charAt(0)})`);

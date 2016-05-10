@@ -38,7 +38,7 @@ export class BotBase {
                     case 'lost': this.gameLost(); break;
                     case 'draw': this.gameDraw(); break;
                 }
-                this._client.reset();
+                // this._client.reset();
             } else {
                 this.map.discover(response.view);
                 if (response.treasure && !this._pickedUpTreasure) {
@@ -51,7 +51,7 @@ export class BotBase {
         .catch(err => console.error(`Error "${err.message}" in sendNextMove()`));
     }
 
-    protected hasPickedUpTreasure() {
+    protected hasPickedUpTreasure(): void {
         // Can be implemented in derived class
     }
 

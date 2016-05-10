@@ -26,6 +26,7 @@ export class Bot extends BotBase {
     protected hasPickedUpTreasure(): void {
 
         // TODO: Implement this method
+        console.info(`Bot ${this.name} has picked up a treasure!`);
 
     }
 }
