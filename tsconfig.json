@@ -4,5 +4,8 @@
         "noImplicitAny": true,
         "module": "commonjs",
         "moduleResolution": "node"
-    }
+    },
+    "exclude": [
+        "dist"
+    ]
 }

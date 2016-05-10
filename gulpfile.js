@@ -50,7 +50,7 @@ function build () {
 function test () {
     return new Promise((success, fail) => {
         const mocha = require('gulp-spawn-mocha');
-        const watching = /\bwatch/i.test(process.argv.join(' '));
+        const watching = process.argv.length == 2 || /\bwatch/i.test(process.argv.join(' '));
         let hadError = false;
 
         gulp.src(['dist/**/*.spec.js'], { read: false })
