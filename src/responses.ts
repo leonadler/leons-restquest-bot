@@ -1,13 +1,13 @@
-interface IGameOverResponse {
+export interface IGameOverResponse {
     game: 'over',
     result: 'won' | 'lost' | 'draw'
 }
 
-interface IErrorResponse {
+export interface IErrorResponse {
     error: string
 }
 
-interface IViewResponse {
+export interface IViewResponse {
     view: {
         type: 'grass' | 'mountain' | 'water',
         castle?: string,
@@ -16,16 +16,16 @@ interface IViewResponse {
     treasure: boolean;
 }
 
-type IResponse = IGameOverResponse | IErrorResponse | IViewResponse;
+export type IResponse = IGameOverResponse | IErrorResponse | IViewResponse;
 
-function isGameOverResponse(response: IResponse): response is IGameOverResponse {
+export function isGameOverResponse(response: IResponse): response is IGameOverResponse {
     return (<IGameOverResponse> response).game !== undefined;
 }
 
-function isErrorResponse(response: IResponse): response is IErrorResponse {
+export function isErrorResponse(response: IResponse): response is IErrorResponse {
     return (<IErrorResponse> response).error !== undefined;
 }
 
-function isViewResponse(response: IResponse): response is IViewResponse {
+export function isViewResponse(response: IResponse): response is IViewResponse {
     return (<IViewResponse> response).view !== undefined;
 }
