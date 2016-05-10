@@ -17,6 +17,7 @@
     "gulp-typescript": "^2.13.4",
     "merge2": "^1.0.2",
     "mocha": "^2.4.5",
-    "typescript": "^1.9.0-dev.20160510"
+    "typescript": "^1.9.0-dev.20160510",
+    "typings": "^0.8.1"
   }
 }
