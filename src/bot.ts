@@ -1,63 +1,31 @@
-import { RestClient, IGameOverResponse, IViewResponse, isViewResponse, isGameOverResponse } from './rest-client';
+import { BotBase } from './bot-base';
 import { MapTile, GameMap } from './map';
 
-export class Bot {
+type Direction = 'up' | 'down' | 'left' | 'right';
+
+export class Bot extends BotBase {
     protected map: GameMap;
-    private _client: RestClient;
-    private _foundTreasure = false;
 
-    constructor (client: RestClient, map: GameMap = new GameMap()) {
-        if (this.constructor === Bot) {
-            throw new Error('Derive from Bot in your own class.');
+    constructor (client: any) {
+        super(client);
+    }
+
+    protected nextMove (): Direction {
+
+        // TODO: Implement this method
+
+        let rnd = Math.random() * 4 | 0;
+        switch (rnd) {
+            case 0: return 'up';
+            case 1: return 'down';
+            case 2: return 'left';
+            default: return 'right';
         }
-        this._client = client;
-        this.map = map;
     }
 
-    public get name (): string {
-        return this._client.playerName;
-    }
+    protected hasPickedUpTreasure(): void {
 
-    public startGame (): void {
-        this._client.register()
-        .then(response => {
-            console.info(`${this.constructor.name}.startGame(): got response`);
-            this._foundTreasure = response.treasure;
-            this.map.discover(response.view);
-            this.sendNextMove();
-        })
-        .catch(err => console.error(`Error ${err.message} in startGame()`));
-    }
+        // TODO: Implement this method
 
-    private sendNextMove () {
-        let nextMove = this.nextMove();
-        this._client.move(nextMove)
-        .then(response => {
-            if (isGameOverResponse(response)) {
-                switch (response.result) {
-                    case 'won': this.gameWon(); break;
-                    case 'lost': this.gameLost(); break;
-                    case 'draw': this.gameDraw(); break;
-                }
-            }
-        })
-        .catch(err => console.error(`Error ${err.message} in sendNextMove()`));
-    }
-
-    protected nextMove (): 'up' | 'down' | 'left' | 'right' {
-        console.error(`Implement ${this.constructor.name}.nextMove()!`);
-        throw new Error('Not implemented.');
-    }
-
-    protected gameWon (): void {
-        console.info(`GAME WON by ${this.name}!`);
-    }
-
-    protected gameLost (): void {
-        console.info('GAME LOST!');
-    }
-
-    protected gameDraw (): void {
-        console.info('DRAW!');
     }
 }

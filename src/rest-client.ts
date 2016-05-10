@@ -48,7 +48,13 @@ export class RestClient {
     }
 
     public move(moveDirection: 'up' | 'down' | 'left' | 'right'): Promise<IViewResponse | IGameOverResponse> {
-        return this.post('/move/', { name: this._playerName, direction: moveDirection });
+        return this.post('/move/', { player: this._playerName, direction: moveDirection });
+    }
+
+    public reset(): Promise<void> {
+        let calledFrom: string = new Error().stack.match(/^.+?\n.+?\n\s+at ([^\n]+)/)[1];
+        console.warn(`Use RestClient.reset() only for testing!\n${calledFrom}`);
+        return this.post('/reset/', {}).then(() => {});
     }
 
     private post(relativeUrl: string, data: { [key: string]: string }): Promise<IGameOverResponse | IViewResponse> {
@@ -60,6 +66,8 @@ export class RestClient {
             }, (error: Error, response: any, body: string) => {
                 if (error) {
                     return fail(error);
+                } else if (/^Error: /.test(body)) {
+                    return fail(new Error(`Server returned "${body}".`));
                 }
                 try {
                     let response: IResponse = JSON.parse(body);

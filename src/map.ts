@@ -49,6 +49,16 @@ export class GameMap {
         return this.tiles[x + ',' + y];
     }
 
+    public getTileInDirection (direction: 'up' | 'down' | 'left' | 'right'): IMapTile {
+        switch (direction) {
+            case 'up': return this.getTileAt(this.x, this.y + 1);
+            case 'down': return this.getTileAt(this.x, this.y - 1);
+            case 'left': return this.getTileAt(this.x - 1, this.y + 1);
+            case 'right': return this.getTileAt(this.x + 1, this.y + 1);
+        }
+        return null;
+    }
+
     public getAllDiscoveredTiles(): ArrayLike<IMapTile> {
         let list: IMapTile[] = Object.keys(this.tiles).map(key => this.tiles[key]);
         return list;
@@ -74,6 +84,41 @@ export class GameMap {
                 }
             }
         }
+    }
+
+    public toString(): string {
+        if (!this.tiles || Object.keys(this.tiles).length == 0) return '';
+
+        let minX = Number.POSITIVE_INFINITY;
+        let maxX = Number.NEGATIVE_INFINITY;
+        let minY = Number.POSITIVE_INFINITY;
+        let maxY = Number.NEGATIVE_INFINITY;
+
+        Object.keys(this.tiles).forEach(key => {
+            let [, x, y] = key.match(/^(-?\d+),(-?\d+)$/).map(el => Number.parseInt(el, 10));
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+        });
+
+        let lines: string[] = [];
+        for (let y = maxY - 1; y >= minY; y--) {
+            let currentLine: string[] = [];
+            for (let x = minX; x < maxX; x++) {
+                let tile = this.getTileAt(x, y);
+                if (x === this.x && y === this.y) {
+                    currentLine.push(`(${tile.type.charAt(0)})`);
+                } else if (tile) {
+                    currentLine.push(` ${tile.type.charAt(0)} `);
+                } else {
+                    currentLine.push(' ? ');
+                }
+            }
+            lines.push(currentLine.join(''));
+        }
+
+        return lines.join('\n');
     }
 }
 
