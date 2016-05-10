@@ -1,0 +1,22 @@
+{
+  "name": "leons-restquest-bot",
+  "description": "RestQuest bot by Leon Adler",
+  "version": "0.0.1",
+  "license": "MIT",
+  "repository": "https://github.com/leonadler/leons-restquest-bot",
+  "main": "dist/main.js",
+  "scripts": {
+    "run": "node ."
+  },
+  "devDependencies": {
+    "del": "^2.2.0",
+    "gulp": "github:gulpjs/gulp#4.0",
+    "gulp-rename": "^1.2.2",
+    "gulp-sourcemaps": "^1.6.0",
+    "gulp-spawn-mocha": "^2.2.2",
+    "gulp-typescript": "^2.13.4",
+    "merge2": "^1.0.2",
+    "mocha": "^2.4.5",
+    "typescript": "^1.9.0-dev.20160510"
+  }
+}
