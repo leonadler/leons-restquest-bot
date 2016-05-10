@@ -40,7 +40,7 @@ function build () {
 
         merge(
             tsstream.dts,
-            tsstream.pipe(sourcemaps.write('.', { includeContent: true }))
+            tsstream.pipe(sourcemaps.write('.', { includeContent: true, sourceRoot: '../src' }))
         )
         .pipe(gulp.dest('dist'))
         .on('end', () => hadError ? setExitCodeAnd(fail) : success());

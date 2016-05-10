@@ -1,3 +1,6 @@
+import { install as sourcemapSupport } from 'source-map-support';
+sourcemapSupport({ handleUncaughtExceptions: false });
+
 import { Bot } from './bot';
 import { RestClient } from './rest-client';
 
