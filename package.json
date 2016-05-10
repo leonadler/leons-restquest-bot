@@ -8,8 +8,13 @@
   "scripts": {
     "run": "node ."
   },
+  "dependencies": {
+    "source-map-support": "^0.4.0"
+  },
   "devDependencies": {
+    "chai": "^3.5.0",
     "del": "^2.2.0",
+    "form-data": "^1.0.0-rc4",
     "gulp": "github:gulpjs/gulp#4.0",
     "gulp-rename": "^1.2.2",
     "gulp-sourcemaps": "^1.6.0",
@@ -17,6 +22,7 @@
     "gulp-typescript": "^2.13.4",
     "merge2": "^1.0.2",
     "mocha": "^2.4.5",
+    "request": "^2.72.0",
     "typescript": "^1.9.0-dev.20160510",
     "typings": "^0.8.1"
   }

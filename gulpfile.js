@@ -7,7 +7,7 @@ module.exports = {
     build,
     test,
     watch,
-    default: gulp.series(clean, build, test, watch)
+    default: gulp.series(clean, buildAndTest, watch)
 };
 
 function clean () {
@@ -47,6 +47,10 @@ function build () {
     });
 }
 
+function buildAndTest() {
+    return build().then(test);
+}
+
 function test () {
     return new Promise((success, fail) => {
         const mocha = require('gulp-spawn-mocha');
@@ -64,7 +68,7 @@ function test () {
 
 function watch (runForever) {
     gulp.watch(['src/**/*.ts', 'typings/main/**.ts'],
-        gulp.series(clean, build, test)
+        gulp.series(clean, buildAndTest)
     );
 }
 
