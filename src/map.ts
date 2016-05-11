@@ -5,20 +5,27 @@ export interface IMapTile {
 }
 
 export interface TileImplementation {
-    new(tile: IMapTile): IMapTile;
+    new(x: number, y: number, tile: IMapTile): MapTile;
 }
 
 export class MapTile implements IMapTile {
     private _type: 'grass' | 'forest' | 'mountain' | 'water';
     private _castle: string;
     private _treasure: boolean;
+    private _x: number;
+    private _y: number;
 
-    constructor(data: {
+    constructor(
+        x: number,
+        y: number,
+        data: {
             type: 'grass' | 'forest' | 'mountain' | 'water',
             castle?: string,
             treasure?: boolean
         }) {
 
+        this._x = x;
+        this._y = y;
         this._type = data.type;
         this._castle = data.castle;
         this._treasure = data.treasure;
@@ -27,6 +34,9 @@ export class MapTile implements IMapTile {
     get type() { return this._type; }
     get castle() { return this._castle; }
     get treasure() { return this._treasure; }
+    set treasure(val: boolean) { this._treasure = val; }
+    get x() { return this._x; }
+    get y() { return this._y; }
 }
 
 export class GameMap {
@@ -42,26 +52,29 @@ export class GameMap {
     }
 
     public hasSeen (x: number, y: number): boolean {
-        return this.tiles[x + ',' + y] !== undefined;
+        return this.tiles[`${x},${y}`] !== undefined;
     }
 
     public getTileAt (x: number, y: number): IMapTile {
-        return this.tiles[x + ',' + y];
+        return this.tiles[`${x},${y}`];
     }
 
     public getTileInDirection (direction: 'up' | 'down' | 'left' | 'right'): IMapTile {
+        return this.getTileInDirectionOf(this.position.x, this.position.y, direction);
+    }
+
+    public getTileInDirectionOf (x: number, y: number, direction: 'up' | 'down' | 'left' | 'right'): IMapTile {
         switch (direction) {
-            case 'up': return this.getTileAt(this.x, this.y + 1);
-            case 'down': return this.getTileAt(this.x, this.y - 1);
-            case 'left': return this.getTileAt(this.x - 1, this.y + 1);
-            case 'right': return this.getTileAt(this.x + 1, this.y + 1);
+            case 'up': return this.getTileAt(x, y + 1);
+            case 'down': return this.getTileAt(x, y - 1);
+            case 'left': return this.getTileAt(x - 1, y);
+            case 'right': return this.getTileAt(x + 1, y);
         }
         return null;
     }
 
-    public getAllDiscoveredTiles(): ArrayLike<IMapTile> {
-        let list: IMapTile[] = Object.keys(this.tiles).map(key => this.tiles[key]);
-        return list;
+    public getAllDiscoveredTiles(): IMapTile[] {
+        return Object.keys(this.tiles).map(key => this.tiles[key]);
     }
 
     public playerMoved (direction: 'up' | 'down' | 'left' | 'right') {
@@ -79,11 +92,27 @@ export class GameMap {
 
         for (let y = 0; y < viewSize; y++) {
             for (let x = 0; x < viewSize; x++) {
-                if (!this.hasSeen(this.x + x - offset, this.y - y + offset)) {
-                    this.tiles[(this.x + x - offset) + ',' + (this.y - y + offset)] = new this.mapTileClass(view[y][x]);
+                let absX = this.x + x - offset;
+                let absY = this.y - y + offset;
+                let tileData: IMapTile = view[y][x];
+                let key = `${absX},${absY}`;
+                if (!this.hasSeen(absX, absY)) {
+                    this.tiles[key] = new this.mapTileClass(absX, absY, tileData);
+                } else if (this.tiles[key].treasure && tileData.treasure !== true) {
+                    // Treasure taken by enemy
+                    this.tiles[key].treasure = false;
                 }
             }
         }
+    }
+
+    public shortestPathBetweenPoints (
+        startX: number, startY: number,
+        endX: number, endY: number
+        ) : ('up' | 'down' | 'left' | 'right')[] {
+
+        // TODO
+        return null;
     }
 
     public toString(): string {
