@@ -22,21 +22,31 @@ describe('MapTile', () => {
     });
 });
 
+function toMap(str: TemplateStringsArray): GameMap {
+    let map = new GameMap();
+    map.discover(mapTiles(str));
+    return map;
+}
+
+function mapTiles(str: TemplateStringsArray): MapTile[][] {
+    let lines = str.join('').trim().split(/[\r\n]+/).map(line => line.trim().split(/\s+/));
+    return <MapTile[][]> lines.map(line => line.map(tileType => ({ type: tileType })));
+}
+
 function trimmed(str: TemplateStringsArray): string {
     return str[0].replace(/\n\s+/g, ' \n ').replace(/^\s*\n|\n\s*$/g, '');
 }
 
 describe('GameMap', () => {
     it('toString() works', () => {
-        let map = new GameMap();
-        map.discover([[{type: 'grass'}]]);
+        let map = toMap `grass`;
         expect(map.toString()).to.equal('(g)');
 
-        map.discover([
-            [{type: 'grass'}, {type: 'forest'}, {type: 'mountain'}],
-            [{type: 'water'}, {type: 'grass'}, {type: 'grass'}],
-            [{type: 'mountain'}, {type: 'grass'}, {type: 'grass'}]
-        ]);
+        map = toMap `
+            grass    forest  mountain
+            water    grass   grass
+            mountain grass   grass
+        `;
 
         expect(map.toString()).to.equal(trimmed `
             g  f  m
@@ -47,12 +57,11 @@ describe('GameMap', () => {
 
     it('discover() works', () => {
         let map = new GameMap();
-        map.discover([
-            [{type: 'grass'}, {type: 'forest'}, {type: 'mountain'}],
-            [{type: 'water'}, {type: 'grass'}, {type: 'grass'}],
-            [{type: 'mountain'}, {type: 'grass'}, {type: 'grass'}]
-        ]);
-
+        map.discover(mapTiles `
+            grass     forest  mountain
+            water     grass   grass
+            mountain  grass   grass
+        `);
         expect(map.toString()).to.equal(trimmed `
             g  f  m
             w (g) g
@@ -60,11 +69,11 @@ describe('GameMap', () => {
         `);
 
         map.playerMoved('up');
-        map.discover([
-            [{type: 'mountain'}, {type: 'water'}, {type: 'water'}],
-            [{type: 'grass'}, {type: 'forest'}, {type: 'mountain'}],
-            [{type: 'water'}, {type: 'grass'}, {type: 'grass'}]
-        ]);
+        map.discover(mapTiles `
+            mountain  water   water
+            grass     forest  mountain
+            water     grass   grass
+        `);
 
         expect(map.toString()).to.equal(trimmed `
             m  w  w
@@ -74,11 +83,11 @@ describe('GameMap', () => {
         `);
 
         map.playerMoved('right');
-        map.discover([
-            [{type: 'water'}, {type: 'water'}, {type: 'grass'}, ],
-            [{type: 'forest'}, {type: 'mountain'}, {type: 'water'}],
-            [{type: 'grass'}, {type: 'grass'}, {type: 'water'}]
-        ]);
+        map.discover(mapTiles `
+            water   water     grass
+            forest  mountain  water
+            grass   grass     water
+        `);
 
         expect(map.toString()).to.equal(trimmed `
             m  w  w  g
@@ -89,17 +98,42 @@ describe('GameMap', () => {
     });
 
     it('hasSeen() works', () => {
-        let map = new GameMap();
-        map.discover([
-            [{type: 'grass'}, {type: 'forest'}, {type: 'mountain'}],
-            [{type: 'water'}, {type: 'grass'}, {type: 'grass'}],
-            [{type: 'mountain'}, {type: 'grass'}, {type: 'grass'}]
-        ]);
+        let map = toMap `
+            grass     forest  mountain
+            water     grass   grass
+            mountain  grass   grass
+        `;
 
         expect(map.hasSeen(0, 0)).to.equal(true);
         expect(map.hasSeen(1, 1)).to.equal(true);
         expect(map.hasSeen(3, 1)).to.equal(false);
         expect(map.hasSeen(0, -3)).to.equal(false);
         expect(map.hasSeen(2, 2)).to.equal(false);
+    });
+
+    describe('shortestPathBetweenPoints()', () => {
+        function pathToString(path: ('up' | 'down' | 'left' | 'right')[]): string {
+            return path.map(part => part.charAt(0)).join('');
+        }
+
+        it('works for small maps', () => {
+            let map = toMap `
+                grass     forest  mountain
+                water     grass   grass
+                mountain  grass   grass
+            `;
+
+            expect(map.getTileAt(-1, -1).type).to.equal('mountain');
+            expect(map.getTileAt(0, -1).type).to.equal('grass');
+
+            let path = pathToString(map.shortestPathBetweenPoints(0, 0, 0, 1));
+            expect(path).to.equal('u');
+
+            pathToString(map.shortestPathBetweenPoints(0, -1, 0, 2));
+            expect(path).to.equal('uu');
+
+            pathToString(map.shortestPathBetweenPoints(-1, -1, 1, -1));
+            expect(path).to.equal('rr');
+        });
     });
 });

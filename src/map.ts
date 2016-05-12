@@ -106,10 +106,14 @@ export class GameMap {
         }
     }
 
+    public shortestPathTo(x: number, y: number): ('up' | 'down' | 'left' | 'right')[] {
+        return this.shortestPathBetweenPoints(this.x, this.y, x, y);
+    }
+
     public shortestPathBetweenPoints (
         startX: number, startY: number,
         endX: number, endY: number
-        ) : ('up' | 'down' | 'left' | 'right')[] {
+        ): ('up' | 'down' | 'left' | 'right')[] {
 
         // TODO
         return null;

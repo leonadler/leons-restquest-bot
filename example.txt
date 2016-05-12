@@ -1,0 +1,13 @@
+?  w  f  m  g  g  ?
+?  g  g  f  m  g  ?
+g  g  g  g (f) g  g
+g  g  g  f  m  g  g
+m  f  g  g  g  m  g
+f  w  f  m  g  g  m    <  0
+g  f  w  m  m  m  m
+g  g  f  g  g  g  m
+w  g  f  g  g  g  f
+f  g  g  f  f  m  g
+
+         ^
+         0
