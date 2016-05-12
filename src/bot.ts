@@ -14,7 +14,9 @@ class WeightedTile extends MapTile {
 export class Bot extends BotBase {
     protected map: GameMap;
     private climbingMountain: Direction = null;
-    private routeHome: Direction[] = [];
+    private currentRoute: Direction[] = [];
+    private ownCastles: MapTile[] = [];
+    private treasureTile: MapTile = null;
 
     constructor (client: any) {
         super(client, new GameMap(WeightedTile));
@@ -24,59 +26,81 @@ export class Bot extends BotBase {
 
         if (this.climbingMountain) {
             console.log('Climbing mountain ', this.climbingMountain);
-            this.map.playerMoved(this.climbingMountain);
             let direction = this.climbingMountain;
+            this.map.playerMoved(direction);
             this.climbingMountain = null;
             return direction;
+
+        } else if (this.currentRoute && this.currentRoute.length > 0) {
+
+            console.log(this.map.toString());
+            let direction = this.currentRoute.shift();
+            console.info('going ', direction);
+            let mountain = (this.map.getTileInDirection(direction).type == 'mountain');
+            this.climbingMountain = mountain ? direction : null;
+            if (!this.climbingMountain) {
+                this.map.playerMoved(direction);
+            }
+            return direction;
+
+        } else if (this.hasTreasure) {
+            // TODO mountain
+            this.currentRoute = this.map.shortestPathTo(0, 0);
+            console.log(this.map.toString());
+            console.info('Had to recalc way, going ', this.currentRoute[0]);
+            return this.currentRoute.shift();
         }
 
-        if (this.hasTreasure) {
-            console.log('Trying to bring the treasure home...');
-            if (this.routeHome.length > 0) {
-                return this.routeHome.pop();
-            }
+
+        // if (this.hasTreasure) {
+        //     console.log('Trying to bring the treasure home...');
+        //     if (this.routeHome.length > 0) {
+        //         return this.routeHome.pop();
+        //     }
+
+        this.weightAllTiles();
+        this.weighCurrentNeighbors();
+
+        console.info('Weighing unvisited map tiles...');
+        // console.info(this.visualize());
+        console.info(this.map.toString());
+
+        let neighborTiles: {at: Direction, tile: WeightedTile}[] = <any>[
+            { at: 'up', tile: this.map.getTileInDirection('up') },
+            { at: 'down', tile: this.map.getTileInDirection('down') },
+            { at: 'left', tile: this.map.getTileInDirection('left') },
+            { at: 'right', tile: this.map.getTileInDirection('right') }
+        ];
+
+        neighborTiles.sort(
+            (a, b) => (a.tile.weight != b.tile.weight)
+                ? b.tile.weight - a.tile.weight
+                // If two nodes are equally interesting, randomize result!
+                : 0.5 - Math.random()
+        );
+        let bestNeighbor = neighborTiles[0];
+        bestNeighbor.tile.timesPassed += 1;
+
+        if (bestNeighbor.tile.type === 'mountain') {
+            this.climbingMountain = bestNeighbor.at;
         } else {
-            this.weightAllTiles();
-            this.weighCurrentNeighbors();
-
-            console.info('=== weighed ===');
-            // console.info(this.visualize());
-            console.info(this.map.toString());
-
-            let neighborTiles: {at: Direction, tile: WeightedTile}[] = <any>[
-                { at: 'up', tile: this.map.getTileInDirection('up') },
-                { at: 'down', tile: this.map.getTileInDirection('down') },
-                { at: 'left', tile: this.map.getTileInDirection('left') },
-                { at: 'right', tile: this.map.getTileInDirection('right') }
-            ];
-
-            neighborTiles.sort(
-                (a, b) => b.tile.weight - a.tile.weight
-            );
-            let bestNeighbor = neighborTiles[0];
-            bestNeighbor.tile.timesPassed += 1;
-
-            if (bestNeighbor.tile.type === 'mountain') {
-                this.climbingMountain = bestNeighbor.at;
-            } else {
-                this.map.playerMoved(bestNeighbor.at);
-            }
-
-            let prettyTiles = neighborTiles.map( (t: any) => [t.at, t.tile.weight]);
-            console.info('Neighbor tiles: ', prettyTiles, ', going ', bestNeighbor.at);
-
-            return bestNeighbor.at;
+            this.map.playerMoved(bestNeighbor.at);
         }
 
-        console.info('out of ideas!');
+        let prettyTiles = neighborTiles.map( (t: any) => [t.at, t.tile.weight]);
+        console.info('Neighbor tiles: ', prettyTiles, ', going ', bestNeighbor.at);
 
-        let rnd = Math.random() * 4 | 0;
-        switch (rnd) {
-            case 0: return 'up';
-            case 1: return 'down';
-            case 2: return 'left';
-            default: return 'right';
-        }
+        return bestNeighbor.at;
+
+        // console.info('out of ideas!');
+
+        // let rnd = Math.random() * 4 | 0;
+        // switch (rnd) {
+        //     case 0: return 'up';
+        //     case 1: return 'down';
+        //     case 2: return 'left';
+        //     default: return 'right';
+        // }
     }
 
     private weightAllTiles () {
@@ -170,7 +194,37 @@ export class Bot extends BotBase {
 
     protected pickedUpTreasure (): void {
         console.info(`Bot ${this.playerName} has picked up a treasure!`);
-        this.calculateFastesRouteHome();
+
+        // TODO: FIX THIS
+        //this.currentRoute = this.calculateFastesRouteHome();
+
+        this.currentRoute = this.map.shortestPathTo(0, 0);
+        console.info('Fastest way home: ', this.currentRoute);
+    }
+
+    protected foundTreasure (treasure: MapTile): void {
+        console.info('I can see the treasure!');
+        if (!this.hasTreasure) {
+            this.currentRoute = this.map.shortestPathTo(treasure.x, treasure.y);
+            console.info('Shortest path to treasure: ', this.currentRoute);
+        }
+    }
+
+    protected treasureTakenByEnemy(tile: MapTile): void {
+        // If the enemy was faster than we are, forget the treasure
+        if (!this.hasTreasure && this.treasureTile == tile) {
+            this.currentRoute = [];
+        }
+    }
+
+    protected foundOwnCaste (castle: MapTile): void {
+        this.ownCastles.push(castle);
+    }
+
+    protected foundEnemyCastle (castle: MapTile): void {
+        // meh
+        // HACKY
+        castle['_type'] = 'water';
     }
 
     private tilesNextToTile (tileX: number, tileY: number): { at: Direction, tile: WeightedTile }[] {
@@ -182,51 +236,69 @@ export class Bot extends BotBase {
         ].filter(t => t.tile != null));
     }
 
-    private calculateFastesRouteHome(): void {
+    private calculateFastesRouteHome(): Direction[] {
         console.log('Calculating fastest way home...');
 
-        let remainingTiles = <WeightedTile[]> this.map.getAllDiscoveredTiles();
-        remainingTiles.forEach(tile => tile.shortestHomeDistance = 9999);
+        let bestCastle: MapTile = null;
+        let bestDistance = 99999;
+        let bestPath: Direction[] = null;
 
-        let homeTile = <WeightedTile> this.map.getTileAt(this.map.position.x, this.map.position.y);
-        homeTile.shortestHomeDistance = 0;
-
-        do {
-            // Find the tile closest to home
-            remainingTiles.sort( (a, b) => a.shortestHomeDistance - b.shortestHomeDistance );
-
-            let tileToWork = remainingTiles.shift();
-            let workDistance = tileToWork.shortestHomeDistance;
-
-            console.info(`Calculating... ${remainingTiles.length} remaining, work distance ${workDistance}`);
-
-            let neighbors = this.tilesNextToTile(tileToWork.x, tileToWork.y);
-            neighbors.forEach(neighbor => {
-                let mountain = (neighbor.tile.type === 'mountain');
-                let neighborDistance = workDistance + (mountain ? 2 : 1);
-                if (neighborDistance < neighbor.tile.shortestHomeDistance) {
-                    neighbor.tile.shortestHomeDistance = neighborDistance;
-                    neighbor.tile.wayHomeMountain = mountain;
-                    neighbor.tile.wayHome = this.oppositeDirectionOf(neighbor.at);
-                }
-            });
-        } while (remainingTiles.length > 0);
-
-        // Create the path home for the current tile
-        let routeHome = this.routeHome = <Direction[]> [];
-        let current = <WeightedTile> this.map.getTileAt(this.map.position.x, this.map.position.y);
-
-        while (current && current.wayHome) {
-            let nextTile = <WeightedTile> this.map.getTileInDirectionOf(current.x, current.y, current.wayHome);
-            if (nextTile.type == 'mountain') {
-                routeHome.unshift(current.wayHome);
+        this.ownCastles.forEach(castle => {
+            let path = this.map.shortestPathTo(castle.x, castle.y);
+            if (path.length < bestDistance) {
+                bestCastle = castle;
+                bestDistance = path.length;
+                bestPath = path;
             }
-            routeHome.unshift(current.wayHome);
-            current = nextTile;
-        }
+        });
 
-        console.info('Fastest way home: ', routeHome);
+        return bestPath;
     }
+
+    // private oldCalculateFastesRouteHome(): void {
+
+    //     let remainingTiles = <WeightedTile[]> this.map.getAllDiscoveredTiles();
+    //     remainingTiles.forEach(tile => tile.shortestHomeDistance = 9999);
+
+    //     let homeTile = <WeightedTile> this.map.getTileAt(this.map.position.x, this.map.position.y);
+    //     homeTile.shortestHomeDistance = 0;
+
+    //     do {
+    //         // Find the tile closest to home
+    //         remainingTiles.sort( (a, b) => a.shortestHomeDistance - b.shortestHomeDistance );
+
+    //         let tileToWork = remainingTiles.shift();
+    //         let workDistance = tileToWork.shortestHomeDistance;
+
+    //         console.info(`Calculating... ${remainingTiles.length} remaining, work distance ${workDistance}`);
+
+    //         let neighbors = this.tilesNextToTile(tileToWork.x, tileToWork.y);
+    //         neighbors.forEach(neighbor => {
+    //             let mountain = (neighbor.tile.type === 'mountain');
+    //             let neighborDistance = workDistance + (mountain ? 2 : 1);
+    //             if (neighborDistance < neighbor.tile.shortestHomeDistance) {
+    //                 neighbor.tile.shortestHomeDistance = neighborDistance;
+    //                 neighbor.tile.wayHomeMountain = mountain;
+    //                 neighbor.tile.wayHome = this.oppositeDirectionOf(neighbor.at);
+    //             }
+    //         });
+    //     } while (remainingTiles.length > 0);
+
+    //     // Create the path home for the current tile
+    //     let routeHome = this.routeHome = <Direction[]> [];
+    //     let current = <WeightedTile> this.map.getTileAt(this.map.position.x, this.map.position.y);
+
+    //     while (current && current.wayHome) {
+    //         let nextTile = <WeightedTile> this.map.getTileInDirectionOf(current.x, current.y, current.wayHome);
+    //         if (nextTile.type == 'mountain') {
+    //             routeHome.unshift(current.wayHome);
+    //         }
+    //         routeHome.unshift(current.wayHome);
+    //         current = nextTile;
+    //     }
+
+    //     console.info('Fastest way home: ', routeHome);
+    // }
 
     private oppositeDirectionOf (direction: Direction): Direction {
         switch (direction) {

@@ -1,10 +1,14 @@
 import { RestClient, IGameOverResponse, IViewResponse, isViewResponse, isGameOverResponse } from './rest-client';
-import { MapTile, GameMap } from './map';
+import { MapTile, GameMap, IDiscoverResult, Direction } from './map';
+
+// Debug timer too see whats going on
+const timeout = 0;
 
 export class BotBase {
     protected map: GameMap;
     private _client: RestClient;
     private _hasTreasure = false;
+    private _wasMountain = false;
 
     constructor (client: RestClient, map: GameMap = new GameMap()) {
         if (this.constructor === BotBase) {
@@ -22,15 +26,46 @@ export class BotBase {
         .then(response => {
             console.info(`${this.constructor.name}.startGame(): got response`);
             this._hasTreasure = response.treasure;
-            this.map.discover(response.view);
-            // this.sendNextMove();
-            setTimeout(() => this.sendNextMove(), 200);
+            this.processViewResponse(response);
+
+            if (timeout) {
+                setTimeout(() => this.sendNextMove(), timeout);
+            } else {
+                this.sendNextMove();
+            }
         })
         .catch(err => console.error(`Error "${err.message}" in startGame()`));
     }
 
+    private processViewResponse(response: IViewResponse) {
+        const result: IDiscoverResult = this.map.discover(response.view);
+        if (result.foundTreasure) {
+            this.foundTreasure(<MapTile> result.foundTreasure);
+        }
+
+        if (result.treasureTaken) {
+            if (response.treasure && !this._hasTreasure) {
+                this._hasTreasure = true;
+                this.pickedUpTreasure(<MapTile> result.treasureTaken);
+            } else {
+                this.treasureTakenByEnemy(<MapTile> result.treasureTaken);
+            }
+        } else if (response.treasure && !this._hasTreasure) {
+            this._hasTreasure = true;
+            this.pickedUpTreasure(null);
+        }
+
+        if (result.foundCastle) {
+            if (result.foundCastle.castle == this.playerName) {
+                this.foundOwnCastle(<MapTile> result.foundCastle);
+            } else {
+                this.foundEnemyCastle(<MapTile> result.foundCastle);
+            }
+        }
+    }
+
     private sendNextMove () {
-        let nextMove: 'up' | 'down' | 'left' | 'right';
+        let nextMove: Direction;
         try {
             nextMove = this.nextMove();
             if (nextMove !== 'up' && nextMove !== 'down' && nextMove !== 'left' && nextMove !== 'right') {
@@ -39,6 +74,19 @@ export class BotBase {
         } catch (err) {
             console.error(`Error in ${this.constructor.name}.sendNextMove(): `, err);
         }
+
+        // if (this._wasMountain) {
+        //     this.map.playerMoved(nextMove);
+        //     this._wasMountain = false;
+        // } else {
+        //     let mountain = this.map.getTileInDirection(nextMove);
+        //     if (mountain) {
+        //         this._wasMountain = true;
+        //     } else {
+        //         this._wasMountain = false;
+        //         this.map.playerMoved(nextMove);
+        //     }
+        // }
 
         this._client.move(nextMove)
         .then(response => {
@@ -50,23 +98,39 @@ export class BotBase {
                 }
                 // this._client.reset();
             } else {
-                this.map.discover(response.view);
-                if (response.treasure && !this._hasTreasure) {
-                    this._hasTreasure = true;
-                    this.pickedUpTreasure();
+                this.processViewResponse(response);
+
+                if (timeout) {
+                    setTimeout(() => this.sendNextMove(), timeout);
+                } else {
+                    this.sendNextMove();
                 }
-                // this.sendNextMove();
-                setTimeout(() => this.sendNextMove(), 200);
             }
         })
         .catch(err => console.error(`Error "${err.message}" in sendNextMove()`));
     }
 
-    protected pickedUpTreasure(): void {
+    protected foundTreasure(tile: MapTile): void {
         // Can be implemented in derived class
     }
 
-    protected nextMove (): 'up' | 'down' | 'left' | 'right' {
+    protected pickedUpTreasure(tile: MapTile): void {
+        // Can be implemented in derived class
+    }
+
+    protected treasureTakenByEnemy(tile: MapTile): void {
+        // Can be implemented in derived class
+    }
+
+    protected foundOwnCastle(tile: MapTile): void {
+        // Can be implemented in derived class
+    }
+
+    protected foundEnemyCastle(tile: MapTile): void {
+        // Can be implemented in derived class
+    }
+
+    protected nextMove (): Direction {
         console.error(`Implement ${this.constructor.name}.nextMove()!`);
         throw new Error('Not implemented.');
     }

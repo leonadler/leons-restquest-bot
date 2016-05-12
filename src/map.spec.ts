@@ -1,4 +1,4 @@
-import { IMapTile, MapTile, GameMap } from './map';
+import { IMapTile, MapTile, GameMap, Direction } from './map';
 import { expect } from './tests-base';
 
 describe('MapTile', () => {
@@ -112,7 +112,7 @@ describe('GameMap', () => {
     });
 
     describe('shortestPathBetweenPoints()', () => {
-        function pathToString(path: ('up' | 'down' | 'left' | 'right')[]): string {
+        function pathToString(path: Direction[]): string {
             return path.map(part => part.charAt(0)).join('');
         }
 
@@ -126,14 +126,74 @@ describe('GameMap', () => {
             expect(map.getTileAt(-1, -1).type).to.equal('mountain');
             expect(map.getTileAt(0, -1).type).to.equal('grass');
 
-            let path = pathToString(map.shortestPathBetweenPoints(0, 0, 0, 1));
-            expect(path).to.equal('u');
+            let path = map.shortestPathBetweenPoints(0, 0, 0, 1);
+            expect(pathToString(path)).to.equal('u');
 
-            pathToString(map.shortestPathBetweenPoints(0, -1, 0, 2));
-            expect(path).to.equal('uu');
+            path = map.shortestPathBetweenPoints(0, -1, 0, 1);
+            expect(pathToString(path)).to.equal('uu');
 
-            pathToString(map.shortestPathBetweenPoints(-1, -1, 1, -1));
-            expect(path).to.equal('rr');
+            path = map.shortestPathBetweenPoints(0, -1, 0, 2); // invalid y
+            expect(path).to.equal(null);
+
+            path = map.shortestPathBetweenPoints(-1, -1, 1, -1);
+            expect(pathToString(path)).to.equal('rr');
+        });
+
+        it('works for large maps', () => {
+            let map = toMap `
+                grass     water   water   water   grass
+                grass     water   water   water   grass
+                grass     forest  water   water   grass
+                grass     water   grass   grass   grass
+                mountain  grass   grass   grass   grass
+            `;
+
+            expect(map.getTileAt(-2, 2).type).to.equal('grass');
+            expect(map.getTileAt(-1, 2).type).to.equal('water');
+
+            let path = map.shortestPathBetweenPoints(-2, 2, 2, 2);
+            expect(pathToString(path)).to.equal('dddddrrurruuu');
+
+            path = map.shortestPathBetweenPoints(-1, 0, 2, 2);
+            expect(pathToString(path)).to.equal('ldddrrurruuu');
+        });
+
+
+        it('does not walk into water', () => {
+            let map = toMap `
+                grass     water   grass   grass   grass
+                grass     water   grass   water   grass
+                grass     water   grass   water   grass
+                grass     water   grass   water   grass
+                mountain  grass   grass   water   grass
+            `;
+
+            expect(map.getTileAt(-2, 2).type).to.equal('grass');
+            expect(map.getTileAt(-1, 2).type).to.equal('water');
+
+            let path = map.shortestPathBetweenPoints(-2, 2, 2, -2);
+            expect(pathToString(path)).to.equal('ddddrruuuurrdddd');
+
+            'up up right right down down down down'
+                .split(' ').forEach(move => map.playerMoved(<any> move));
+
+
+            expect(map.position).to.deep.equal({ x: 2, y: -2 });
+            expect(map.getTileInDirection('left').type).to.equal('water');
+            expect(map.getTileInDirection('up').type).to.equal('grass');
+            expect(map.getTileInDirection('right')).to.equal(undefined);
+            expect(map.getTileInDirection('down')).to.equal(undefined);
+
+            map.discover(mapTiles `
+                grass water    grass water grass
+                grass water    grass water grass
+                water water    grass water grass
+                grass water    grass water water
+                grass mountain grass water mountain
+            `);
+
+            path = map.shortestPathBetweenPoints(-2, 2, 0, -3);
+            expect(pathToString(path)).to.equal('dddddrruuuurrddddddllu');
         });
     });
 });

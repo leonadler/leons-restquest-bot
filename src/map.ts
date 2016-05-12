@@ -39,6 +39,14 @@ export class MapTile implements IMapTile {
     get y() { return this._y; }
 }
 
+export interface IDiscoverResult {
+    foundCastle?: IMapTile,
+    foundTreasure?: IMapTile,
+    treasureTaken?: IMapTile
+}
+
+export type Direction = 'up' | 'down' | 'left' | 'right';
+
 export class GameMap {
     protected tiles: { [k: string]: IMapTile } = {};
     private x: number = 0;
@@ -59,11 +67,11 @@ export class GameMap {
         return this.tiles[`${x},${y}`];
     }
 
-    public getTileInDirection (direction: 'up' | 'down' | 'left' | 'right'): IMapTile {
+    public getTileInDirection (direction: Direction): IMapTile {
         return this.getTileInDirectionOf(this.position.x, this.position.y, direction);
     }
 
-    public getTileInDirectionOf (x: number, y: number, direction: 'up' | 'down' | 'left' | 'right'): IMapTile {
+    public getTileInDirectionOf (x: number, y: number, direction: Direction): IMapTile {
         switch (direction) {
             case 'up': return this.getTileAt(x, y + 1);
             case 'down': return this.getTileAt(x, y - 1);
@@ -77,7 +85,7 @@ export class GameMap {
         return Object.keys(this.tiles).map(key => this.tiles[key]);
     }
 
-    public playerMoved (direction: 'up' | 'down' | 'left' | 'right') {
+    public playerMoved (direction: Direction) {
         switch (direction) {
             case 'up': this.y += 1; break;
             case 'down': this.y -= 1; break;
@@ -86,9 +94,11 @@ export class GameMap {
         }
     }
 
-    public discover (view: IMapTile[][]): void {
+    public discover (view: IMapTile[][]): IDiscoverResult {
         let viewSize = view.length;
         let offset = (viewSize - 1) / 2;
+
+        let result: IDiscoverResult = { };
 
         for (let y = 0; y < viewSize; y++) {
             for (let x = 0; x < viewSize; x++) {
@@ -98,25 +108,94 @@ export class GameMap {
                 let key = `${absX},${absY}`;
                 if (!this.hasSeen(absX, absY)) {
                     this.tiles[key] = new this.mapTileClass(absX, absY, tileData);
+                    if (tileData.treasure) {
+                        result.foundTreasure = this.tiles[key];
+                    } else if (tileData.castle) {
+                        result.foundCastle = this.tiles[key];
+                    }
                 } else if (this.tiles[key].treasure && tileData.treasure !== true) {
                     // Treasure taken by enemy
                     this.tiles[key].treasure = false;
+                    result.treasureTaken = this.tiles[key];
                 }
             }
         }
+
+        return result;
     }
 
-    public shortestPathTo(x: number, y: number): ('up' | 'down' | 'left' | 'right')[] {
+    public shortestPathTo(x: number, y: number): Direction[] {
         return this.shortestPathBetweenPoints(this.x, this.y, x, y);
     }
 
     public shortestPathBetweenPoints (
         startX: number, startY: number,
         endX: number, endY: number
-        ): ('up' | 'down' | 'left' | 'right')[] {
+        ): Direction[] {
 
-        // TODO
-        return null;
+        if (!this.hasSeen(startX, startY)) return null;
+        if (!this.hasSeen(endX, endY)) return null;
+
+        let scores = new WeakMap<IMapTile, number>();
+        let waysHome = new WeakMap<IMapTile, Direction[]>();
+        let tilesToSearch = this.getAllDiscoveredTiles().filter(t => t.type != 'water');
+
+        tilesToSearch.forEach(tile => {
+            scores.set(tile, 9999);
+            waysHome.set(tile, []);
+        });
+        scores.set(this.getTileAt(startX, startY), 0);
+
+        // console.log('Calculating shortest path...');
+
+        do {
+            // Sort by lowest score
+            tilesToSearch.sort( (a, b) => scores.get(a) - scores.get(b));
+
+            let currentTile = <MapTile> tilesToSearch.shift();
+            let currentScore = scores.get(currentTile);
+            let currentWayHome = waysHome.get(currentTile);
+
+            // console.log(`Looking at tile ${currentTile.x}, ${currentTile.y} (${currentTile.type})`);
+
+            let neighbors = this.getNeighborsOfTile(currentTile).filter(t => t.tile.type != 'water');
+            neighbors.forEach(neighbor => {
+                let isMountain = (neighbor.tile.type === 'mountain');
+                let neighborScore = currentScore + (isMountain ? 2 : 1);
+                if (neighborScore < scores.get(neighbor.tile)) {
+                    scores.set(neighbor.tile, neighborScore);
+                    waysHome.set(neighbor.tile, currentWayHome.concat(
+                        neighbor.at
+                        // isMountain ? [neighbor.at, neighbor.at] : [neighbor.at]
+                    ));
+                }
+            });
+
+        } while (tilesToSearch.length > 0);
+
+        return waysHome.get(this.getTileAt(endX, endY));
+    }
+
+    private oppositeDirectionOf (direction: Direction): Direction {
+        switch (direction) {
+            case 'up': return 'down';
+            case 'down': return 'up';
+            case 'left': return 'right';
+            case 'right': return 'left';
+        }
+    }
+
+    public getNeighborsOfTile (tile: MapTile): { at: Direction, tile: IMapTile }[] {
+        return this.getNeighborsOfPosition(tile.x, tile.y);
+    }
+
+    public getNeighborsOfPosition (tileX: number, tileY: number): { at: Direction, tile: IMapTile }[] {
+        return <{ at: Direction, tile: IMapTile }[]> ([
+            { at: 'up', tile: this.getTileAt(tileX, tileY + 1) },
+            { at: 'down', tile: this.getTileAt(tileX, tileY - 1) },
+            { at: 'left', tile: this.getTileAt(tileX - 1, tileY) },
+            { at: 'right', tile: this.getTileAt(tileX + 1, tileY) }
+        ].filter(t => t.tile != null));
     }
 
     public toString(): string {
@@ -142,6 +221,8 @@ export class GameMap {
                 let tile = this.getTileAt(x, y);
                 if (x === this.x && y === this.y) {
                     currentLine.push(`(${tile.type.charAt(0)})`);
+                } else if (tile && tile.castle) {
+                    currentLine.push(' C ');
                 } else if (tile) {
                     currentLine.push(` ${tile.type.charAt(0)} `);
                 } else {
