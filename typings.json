@@ -1,7 +1,7 @@
 {
   "ambientDependencies": {
     "form-data": "registry:dt/form-data#0.0.0+20160316155526",
-    "node": "registry:dt/node#4.0.0+20160509154515",
+    "node": "github:DefinitelyTyped/DefinitelyTyped/node/node.d.ts#292e56b5acdb2157c3f53d70a77d34d64ba5fe2f",
     "request": "registry:dt/request#0.0.0+20160316155526",
     "source-map-support": "registry:dt/source-map-support#0.2.10+20160316155526"
   },
